@@ -87,6 +87,8 @@ def patch_gradle_kts(p: Path) -> None:
             'signingConfig = signingConfigs.getByName("debug")',
             'signingConfig = if (keystorePropertiesFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")',
         )
+    if "isMinifyEnabled" not in s:
+        s = re.sub(r"(buildTypes\s*\{\s*release\s*\{)", r"\1\n            isMinifyEnabled = false\n            isShrinkResources = false", s, count=1)
     if DESUGAR not in s:
         s += f'\ndependencies {{\n    coreLibraryDesugaring("{DESUGAR}")\n}}\n'
     p.write_text(s, encoding="utf-8")
@@ -130,6 +132,8 @@ def patch_gradle_groovy(p: Path) -> None:
             "signingConfig signingConfigs.debug",
             "signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug",
         )
+    if "minifyEnabled false" not in s:
+        s = re.sub(r"(buildTypes\s*\{\s*release\s*\{)", r"\1\n            minifyEnabled false\n            shrinkResources false", s, count=1)
     if DESUGAR not in s:
         s += f"\ndependencies {{\n    coreLibraryDesugaring '{DESUGAR}'\n}}\n"
     p.write_text(s, encoding="utf-8")

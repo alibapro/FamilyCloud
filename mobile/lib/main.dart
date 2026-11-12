@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -9,10 +10,18 @@ import 'background.dart';
 import 'store.dart';
 import 'sync.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await initNotifications();
-  runApp(const FamilyCloudApp());
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    try {
+      await initNotifications();
+    } catch (e) {
+      debugPrint('Уведомления недоступны: $e');
+    }
+    runApp(const FamilyCloudApp());
+  }, (error, stack) {
+    debugPrint('Необработанная ошибка: $error\n$stack');
+  });
 }
 
 class FamilyCloudApp extends StatelessWidget {
@@ -48,7 +57,21 @@ class _StartScreenState extends State<StartScreen> {
   }
 
   Future<void> _go() async {
-    final creds = await Creds.load();
+    try {
+      await _start();
+    } catch (e) {
+      if (mounted) setState(() => error = 'Ошибка запуска: $e');
+    }
+  }
+
+  Future<void> _start() async {
+    Creds? creds;
+    try {
+      creds = await Creds.load();
+    } catch (_) {
+      // повреждённое защищённое хранилище (бывает на Xiaomi) — просто войти заново
+      await Creds.clear();
+    }
     final st = await LocalState.load();
     if (!mounted) return;
     if (creds == null) {
@@ -63,7 +86,7 @@ class _StartScreenState extends State<StartScreen> {
       }
     }
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomeScreen(creds: creds, st: st)));
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomeScreen(creds: creds!, st: st)));
   }
 
   @override
