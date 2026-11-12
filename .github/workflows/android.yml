@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -56,3 +58,15 @@ jobs:
         with:
           name: FamilyCloud-apk
           path: build_app/build/app/outputs/flutter-apk/app-release.apk
+
+      # Готовый APK кладётся в ветку "apk" — его удобно скачать: Code → ветка apk → FamilyCloud.apk
+      - name: Публикация APK в ветку apk
+        run: |
+          mkdir -p out
+          cp build_app/build/app/outputs/flutter-apk/app-release.apk out/FamilyCloud.apk
+          cd out
+          git init -q
+          git checkout -q -b apk
+          git add FamilyCloud.apk
+          git -c user.name="github-actions" -c user.email="actions@github.com" commit -q -m "APK из ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" apk
