@@ -1,0 +1,23 @@
+name: familycloud
+description: Семейное облако — выгрузка фото и видео на домашний сервер.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  crypto: ^3.0.3
+  convert: ^3.1.1
+  photo_manager: ^3.5.0
+  flutter_secure_storage: ^9.2.2
+  path_provider: ^2.1.4
+  workmanager: ^0.8.0
+  flutter_local_notifications: ^17.2.4
+  local_auth: ^2.3.0
+
+flutter:
+  uses-material-design: true

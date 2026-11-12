@@ -1,0 +1,58 @@
+# Сборка APK в облаке GitHub — ничего не нужно ставить на компьютер.
+# Готовый файл: вкладка Actions → последний запуск → Artifacts → FamilyCloud-apk
+name: Android APK
+
+on:
+  push:
+    paths: ["mobile/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Подготовка проекта
+        run: |
+          flutter create --org kz.familycloud --project-name familycloud --platforms android build_app
+          cp mobile/pubspec.yaml build_app/
+          rm -rf build_app/lib build_app/test
+          cp -r mobile/lib build_app/lib
+          python3 mobile/tools/patch_android.py build_app
+
+      # Постоянный ключ подписи (чтобы обновления ставились поверх).
+      # Добавьте секреты репозитория KEYSTORE_BASE64 и KEYSTORE_PASSWORD (см. README).
+      - name: Ключ подписи
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=familycloud\nstoreFile=%s\n" \
+              "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" "$RUNNER_TEMP/release.jks" > build_app/android/key.properties
+          else
+            echo "::warning::Секреты ключа не заданы — APK подписан временным ключом"
+          fi
+
+      - name: Сборка APK
+        working-directory: build_app
+        run: |
+          flutter pub get
+          flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FamilyCloud-apk
+          path: build_app/build/app/outputs/flutter-apk/app-release.apk
